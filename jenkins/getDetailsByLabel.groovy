@@ -21,10 +21,13 @@ def getDetailsByLabel (label) {
                 ]
             }
         } else if (cloud.class.simpleName == "KubernetesCloud") {
-            if (cloud.getLabels() =~ label) {
+            cloud.templates.each { template ->
+            if (template.label =~ label) {
                 details << [
-                  cloud: cloud.name,
-                  label: cloud.getLabels()]
+                    cloud : cloud.name,
+                    label : template.label,
+                    templateName: template.name
+                ]
             }
         } else {
             println "Unknown cloud type: ${cloud.class.simpleName}"
@@ -51,7 +54,7 @@ def printDetails(details) {
 }
 
 // Example usage
-def label = "my-spot-label" // Replace with your label
+def label = "" // Replace with your label
 def detailsList = getDetailsByLabel(label)
 detailsList.each { details ->
   printDetails(details)
