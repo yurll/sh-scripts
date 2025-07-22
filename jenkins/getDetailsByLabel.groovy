@@ -22,12 +22,13 @@ def getDetailsByLabel (label) {
             }
         } else if (cloud.class.simpleName == "KubernetesCloud") {
             cloud.templates.each { template ->
-            if (template.label =~ label) {
-                details << [
-                    cloud : cloud.name,
-                    label : template.label,
-                    templateName: template.name
-                ]
+                if (template.label =~ label) {
+                    details << [
+                        cloud : cloud.name,
+                        label : template.label,
+                        templateName: template.name
+                    ]
+                }
             }
         } else {
             println "Unknown cloud type: ${cloud.class.simpleName}"
