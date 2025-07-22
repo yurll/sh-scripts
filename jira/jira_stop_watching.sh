@@ -7,7 +7,7 @@ if [ -f "$(dirname "$0")/.env" ]; then
   set +a
 fi
 
-JQL='watcher = currentUser() AND status != Resolved'
+JQL='watcher = currentUser()' # AND status != Resolved'
 MAX_RESULTS=100
 
 ENCODED_JQL=$(jq -rn --arg v "$JQL" '$v|@uri')
