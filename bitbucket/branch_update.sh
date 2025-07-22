@@ -1,7 +1,9 @@
 #!/bin/bash
 # shellcheck source=/dev/null
 
+BB_RESPONSE_FILE="bb_response.txt"
 BRANCH_FILE="bb_create_prs.lock"
+PRS_FILE="bb_prs.txt"
 CALLER_DIR="$(pwd)"
 
 if [ -f "$(dirname "$0")/.env" ]; then
@@ -27,15 +29,18 @@ function bb_create_temp_branch() {
 
 function bb_create_prs() {
   if [ -z "$1" ]; then
-      echo "Please provide a ticket ID"
+      echo "No parameters provided. Getting ticket ID and title from commit message..."
+      commit_message=$(git log -1 --pretty=%B)
+      IFS=':' read -r ticket_id title <<< "$commit_message"
+      echo "[INFO] Creating PRs for ticket ID: '$ticket_id' with title: '$title'"
+  elif [ -z "$2" ]; then
+      echo "[ERROR] Ticket ID provided. Please provide a title"
       return
+  else
+      echo "[INFO] Using provided ticket ID: '$1' and title: '$2'"
+      ticket_id="$1"
+      title="$2"
   fi
-  if [ -z "$2" ]; then
-      echo "Please provide a title"
-      return
-  fi
-  ticket_id=$1
-  title=$2
   current_branch=$(git rev-parse --abbrev-ref HEAD)
   commit_hash=$(git rev-parse HEAD)
   source "$TOKEN_FILE"
@@ -53,11 +58,10 @@ function bb_create_prs() {
     echo "DEBUG: else"
     if [ "$current_branch" != "$temp_branch" ]; then
       echo "Please switch to $temp_branch branch"
-      # return
+      return
     fi
     echo "Creating lock file $BRANCH_FILE"
     echo "Creating in: $CALLER_DIR"
-    echo "myfile" > "myfile"
     printf "%s\n" "${BRANCH_LIST_SET[@]}" > "$BRANCH_FILE"
     current_branches=("${BRANCH_LIST_SET[@]}")
   fi
@@ -71,7 +75,8 @@ function bb_create_prs() {
       git checkout -b "$side_branch"
       if ! git cherry-pick "$commit_hash"; then
         echo "Cherry-pick failed for branch '$side_branch'. Please resolve conflicts and try again."
-        break
+        echo "   You have to resolve conflicts and run 'git cherry-pick --continue' or 'git cherry-pick --abort' to cancel."
+        return
       fi
     fi
     unset bb_continue
@@ -101,26 +106,32 @@ EOD
     )
     response_code=$(curl -s "https://api.bitbucket.org/2.0/repositories/$WORKSPACE/$reponame/pullrequests" \
                     --user "$USERNAME:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
-                    --data "$payload_data" --output response.txt --write-out '%{http_code}')
+                    --data "$payload_data" --output "$BB_RESPONSE_FILE" --write-out '%{http_code}')
     if [ "$response_code" != "201" ]; then
       echo -e "\n\nERROR: Failed to create PR: code: $response_code\n\n"
-      jq . response.txt
+      jq . "$BB_RESPONSE_FILE"
     else
       echo -e "\n\nPR created successfully\!"
-      jq .links.html.href response.txt
+      jq .links.html.href "$BB_RESPONSE_FILE" | tee -a "$PRS_FILE"
     fi
     grep -Fxv "$branch" "$BRANCH_FILE" > "${BRANCH_FILE}.tmp" && mv "${BRANCH_FILE}.tmp" "$BRANCH_FILE"
   done
   unset BB_TOKEN
-  rm -f response.txt
-  rm -f "$BRANCH_FILE"
   git checkout "$temp_branch"
+  echo "-----------------------------"
+  cat "$PRS_FILE" | while read -r pr_url; do
+    echo "PR URL: $pr_url"
+  done
+  rm -f "$PRS_FILE" "$BRANCH_FILE" "$BB_RESPONSE_FILE"
+  echo "-----------------------------"
+  echo "All PRs created successfully!"
+  echo "You can now delete the temporary branch '$temp_branch' if you wish."
+  echo "To clean up, run: bb_cleanup"
 }
 
 function bb_cleanup() {
   git checkout "$(bb_get_default_branch)"
   git branch -D "$temp_branch"
-  git push origin --delete "$temp_branch"
 }
 
 function bb_get_default_branch() {
