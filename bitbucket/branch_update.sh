@@ -12,11 +12,11 @@ if [ -f "$(dirname "$0")/.env" ]; then
   set +a
 fi
 
-temp_branch="side/$AUTHOR/temp-branch"
+temp_branch="side/$BB_AUTHOR/temp-branch"
 
 
-if [ ! -f "$TOKEN_FILE" ]; then
-  echo "Please create a file $TOKEN_FILE with the following content:"
+if [ ! -f "$BB_TOKEN_FILE" ]; then
+  echo "Please create a file $BB_TOKEN_FILE with the following content:"
   echo "export BB_TOKEN=\"<your-bitbucket-token>\""
   return
 fi
@@ -29,7 +29,7 @@ function bb_create_temp_branch() {
 
 function bb_create_prs() {
   if [ -z "$1" ]; then
-      echo "No parameters provided. Getting ticket ID and title from commit message..."
+      echo "[WARN] No parameters provided. Getting ticket ID and title from commit message..."
       commit_message=$(git log -1 --pretty=%B)
       IFS=':' read -r ticket_id title <<< "$commit_message"
       echo "[INFO] Creating PRs for ticket ID: '$ticket_id' with title: '$title'"
@@ -43,7 +43,7 @@ function bb_create_prs() {
   fi
   current_branch=$(git rev-parse --abbrev-ref HEAD)
   commit_hash=$(git rev-parse HEAD)
-  source "$TOKEN_FILE"
+  source "$BB_TOKEN_FILE"
   echo "DEBUG: brach_file: $BRANCH_FILE"
   echo "Current working dir: $(pwd)"
   if [ -f "$BRANCH_FILE" ]; then
@@ -62,13 +62,13 @@ function bb_create_prs() {
     fi
     echo "Creating lock file $BRANCH_FILE"
     echo "Creating in: $CALLER_DIR"
-    printf "%s\n" "${BRANCH_LIST_SET[@]}" > "$BRANCH_FILE"
-    current_branches=("${BRANCH_LIST_SET[@]}")
+    printf "%s\n" "${BB_BRANCH_LIST_SET[@]}" > "$BRANCH_FILE"
+    current_branches=("${BB_BRANCH_LIST_SET[@]}")
   fi
 
   reponame=$(basename "$(git rev-parse --show-toplevel)")
   for branch in "${current_branches[@]}"; do
-    side_branch="side/$AUTHOR/$branch/$ticket_id"
+    side_branch="side/$BB_AUTHOR/$branch/$ticket_id"
     if [ -z "${bb_continue}" ]; then
       git checkout "$branch"
       git pull origin "$branch"
@@ -91,7 +91,7 @@ function bb_create_prs() {
           "name": "$side_branch"
         },
         "repository": {
-          "full_name": "$WORKSPACE/$reponame"
+          "full_name": "$BB_WORKSPACE/$reponame"
         }
       },
       "destination": {
@@ -104,14 +104,15 @@ function bb_create_prs() {
     }
 EOD
     )
-    response_code=$(curl -s "https://api.bitbucket.org/2.0/repositories/$WORKSPACE/$reponame/pullrequests" \
-                    --user "$USERNAME:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
+    response_code=$(curl -s "https://api.bitbucket.org/2.0/repositories/$BB_WORKSPACE/$reponame/pullrequests" \
+                    --user "$BB_USERNAME:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
                     --data "$payload_data" --output "$BB_RESPONSE_FILE" --write-out '%{http_code}')
     if [ "$response_code" != "201" ]; then
-      echo -e "\n\nERROR: Failed to create PR: code: $response_code\n\n"
+      echo -e "\n\n[ERROR] Failed to create PR: code: $response_code\n\n"
+      echo -e "[DEBUG] URL: https://api.bitbucket.org/2.0/repositories/$BB_WORKSPACE/$reponame/pullrequests"
       jq . "$BB_RESPONSE_FILE"
     else
-      echo -e "\n\nPR created successfully\!"
+      echo -e "\n\n[INFO] PR created successfully!"
       jq .links.html.href "$BB_RESPONSE_FILE" | tee -a "$PRS_FILE"
     fi
     grep -Fxv "$branch" "$BRANCH_FILE" > "${BRANCH_FILE}.tmp" && mv "${BRANCH_FILE}.tmp" "$BRANCH_FILE"
@@ -140,13 +141,13 @@ function bb_get_default_branch() {
 
 function bb_test() {
   echo "Testing..."
-  echo "Author: $AUTHOR"
-  echo "Username: $USERNAME"
-  echo "Workspace: $WORKSPACE"
-  echo "Token file: $TOKEN_FILE"
+  echo "Author: $BB_AUTHOR"
+  echo "Username: $BB_USERNAME"
+  echo "Workspace: $BB_WORKSPACE"
+  echo "Token file: $BB_TOKEN_FILE"
 
-  for branch in "${BRANCH_LIST_SET[@]}"; do
-    side_branch="side/$AUTHOR/$branch/$ticket_id"
+  for branch in "${BB_BRANCH_LIST_SET[@]}"; do
+    side_branch="side/$BB_AUTHOR/$branch/$ticket_id"
     echo "Creating PR from '$side_branch' to '$branch'..."
   done
 }

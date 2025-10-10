@@ -49,7 +49,8 @@ function jira_unwatch_issue() {
   local account_id="$1"
   local issue_key="$2"
   echo "  Unwatching issue: $issue_key"
-  result=$(curl -s -o response.txt -w "%{http_code}" -X DELETE \
+  response=$(mktemp)
+  result=$(curl -s -o "$response" -w "%{http_code}" -X DELETE \
   --url "https://${JIRA_DOMAIN}/rest/api/3/issue/${issue_key}/watchers?accountId=${account_id}" \
   --user "${JIRA_EMAIL}:${JIRA_API_TOKEN}")
 
@@ -57,7 +58,8 @@ function jira_unwatch_issue() {
     echo "   Success"
   else
     echo "   ERROR: Failed ($result)"
-    cat response.txt
+    cat "$response"
+    rm -f "$response"
   fi
 }
 
@@ -91,5 +93,4 @@ function jira_stop_watching() {
   done
 
   jira_unwatch_issues "${array[@]}"
-  rm -f response.txt
 }
