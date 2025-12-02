@@ -1,0 +1,2 @@
+dotenv==0.9.9
+undetected-chromedriver==3.5.5
