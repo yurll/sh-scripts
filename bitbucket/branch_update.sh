@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck source=/dev/null
 
 BB_RESPONSE_FILE="bb_response.txt"
@@ -16,6 +16,7 @@ temp_branch="side/$BB_AUTHOR/temp-branch"
 
 
 if [ ! -f "$BB_TOKEN_FILE" ]; then
+  echo "[WARNING] Script 'bitbucket/branch_update' has no credentials"
   echo "Please create a file $BB_TOKEN_FILE with the following content:"
   echo "export BB_TOKEN=\"<your-bitbucket-token>\""
   return
