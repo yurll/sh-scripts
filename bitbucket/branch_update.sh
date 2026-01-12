@@ -122,7 +122,7 @@ EOD
   git checkout "$temp_branch"
   echo "-----------------------------"
   cat "$PRS_FILE" | while read -r pr_url; do
-    echo "PR URL: $pr_url"
+    echo "PR URL: ${pr_url//\"/}"
   done
   rm -f "$PRS_FILE" "$BRANCH_FILE" "$BB_RESPONSE_FILE"
   echo "-----------------------------"
