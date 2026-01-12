@@ -106,7 +106,7 @@ function bb_create_prs() {
 EOD
     )
     response_code=$(curl -s "https://api.bitbucket.org/2.0/repositories/$BB_WORKSPACE/$reponame/pullrequests" \
-                    --user "$BB_USERNAME:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
+                    --user "$BB_EMAIL:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
                     --data "$payload_data" --output "$BB_RESPONSE_FILE" --write-out '%{http_code}')
     if [ "$response_code" != "201" ]; then
       echo -e "\n\n[ERROR] Failed to create PR: code: $response_code\n\n"
@@ -143,7 +143,7 @@ function bb_get_default_branch() {
 function bb_test() {
   echo "Testing..."
   echo "Author: $BB_AUTHOR"
-  echo "Username: $BB_USERNAME"
+  echo "Username: $BB_EMAIL"
   echo "Workspace: $BB_WORKSPACE"
   echo "Token file: $BB_TOKEN_FILE"
 
