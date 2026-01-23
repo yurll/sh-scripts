@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck source=/dev/null
 
 BB_RESPONSE_FILE="bb_response.txt"
@@ -16,6 +16,7 @@ temp_branch="side/$BB_AUTHOR/temp-branch"
 
 
 if [ ! -f "$BB_TOKEN_FILE" ]; then
+  echo "[WARNING] Script 'bitbucket/branch_update' has no credentials"
   echo "Please create a file $BB_TOKEN_FILE with the following content:"
   echo "export BB_TOKEN=\"<your-bitbucket-token>\""
   return
@@ -105,7 +106,7 @@ function bb_create_prs() {
 EOD
     )
     response_code=$(curl -s "https://api.bitbucket.org/2.0/repositories/$BB_WORKSPACE/$reponame/pullrequests" \
-                    --user "$BB_USERNAME:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
+                    --user "$BB_EMAIL:$BB_TOKEN" --request POST --header 'Content-Type: application/json' \
                     --data "$payload_data" --output "$BB_RESPONSE_FILE" --write-out '%{http_code}')
     if [ "$response_code" != "201" ]; then
       echo -e "\n\n[ERROR] Failed to create PR: code: $response_code\n\n"
@@ -121,7 +122,7 @@ EOD
   git checkout "$temp_branch"
   echo "-----------------------------"
   cat "$PRS_FILE" | while read -r pr_url; do
-    echo "PR URL: $pr_url"
+    echo "PR URL: ${pr_url//\"/}"
   done
   rm -f "$PRS_FILE" "$BRANCH_FILE" "$BB_RESPONSE_FILE"
   echo "-----------------------------"
@@ -142,7 +143,7 @@ function bb_get_default_branch() {
 function bb_test() {
   echo "Testing..."
   echo "Author: $BB_AUTHOR"
-  echo "Username: $BB_USERNAME"
+  echo "Username: $BB_EMAIL"
   echo "Workspace: $BB_WORKSPACE"
   echo "Token file: $BB_TOKEN_FILE"
 
