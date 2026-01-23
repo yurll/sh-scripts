@@ -1,0 +1,75 @@
+#!/bin/bash
+
+SWIFT_FEE=35
+POSITIONAL_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -i|--income)
+      INCOME="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -e|--exchangerate)
+      EXCHANGE_RATE="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -h|--help)
+      HELP=true
+      shift # past argument
+      ;;
+    -*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+function run_help {
+  cat << EOT
+The script is a simple bash script that calculates the tax based on the income and exchange rate. The script takes two arguments:  -i  or  --income  and  -e  or  --exchangerate . The script uses the  bc  command to perform the calculations.
+The script first parses the arguments using a while loop and a case statement. The script then checks if the  INCOME_FROM_INVOICE  and  EXCHANGE_RATE  variables are set. If not, it prints the usage message and exits.
+This script automatically adds the SWIFT_FEE to the income to calculate the  INCOME_FROM_INVOICE.
+The script then calculates the general tax, ESV tax, and military tax based on the income and exchange rate. Finally, it prints the total tax.
+
+./tax_calc.sh -i 1000 -e 8.43
+
+This command calculates the tax for an income of 1000 and an exchange rate of 8.43. You remember Dollar for 8, don't you?
+EOT
+  exit 0
+}
+
+function round {
+  echo "scale=2; ($1+0.005)/1" | bc
+}
+
+if [[ $HELP ]]; then
+  run_help
+fi
+
+if [[ -z $INCOME ]] || [[ -z $EXCHANGE_RATE ]]; then
+  echo "Usage: tax_calc.sh -i <income> -e <exchange rate>"
+  exit 1
+fi
+
+set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
+
+INCOME_FROM_INVOICE=$(echo "$INCOME + $SWIFT_FEE" | bc)
+genetal_tax=$(round "$(echo "$INCOME_FROM_INVOICE * $EXCHANGE_RATE * 0.05" | bc)")
+esv_tax=1760
+military_tax=$(round "$(echo "$INCOME_FROM_INVOICE * $EXCHANGE_RATE * 0.01" | bc)")
+
+cat << EOT
+  Income           : $INCOME,  UAH: $(round "$(echo "$INCOME * $EXCHANGE_RATE" | bc)")
+  Income in invoce : $INCOME_FROM_INVOICE
+  Rate             : $EXCHANGE_RATE
+  General tax (5%) : $genetal_tax
+  ESV tax          : $esv_tax
+  Military tax (1%): $military_tax
+  TOTAL TAX        : $(echo "$genetal_tax + $esv_tax + $military_tax" | bc)
+EOT
