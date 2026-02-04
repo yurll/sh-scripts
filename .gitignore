@@ -1,3 +1,4 @@
 .vscode/
 .env
 response.txt
+venv/
