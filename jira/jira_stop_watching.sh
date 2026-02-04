@@ -13,8 +13,6 @@ fi
 JQL='watcher = currentUser()' # AND status != Resolved'
 MAX_RESULTS=100
 
-ENCODED_JQL=$(jq -rn --arg v "$JQL" '$v|@uri')
-
 function jira_get_issues() {
   echo "Fetching watched issues matching JQL..." >&2
   response=$(mktemp)
