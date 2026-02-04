@@ -1,10 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck source=/dev/null
 
 if [ -f "$(dirname "$0")/.env" ]; then
   set -a
   source "$(dirname "$0")/.env"
   set +a
+else
+  echo "[ERROR] [jira_stop_watching]: .env file not found in script directory." >&2
+  return
 fi
 
 JQL='watcher = currentUser()' # AND status != Resolved'
