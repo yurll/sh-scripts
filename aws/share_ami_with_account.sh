@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script shares an AWS AMI with a specific AWS account.
 # Usage:
