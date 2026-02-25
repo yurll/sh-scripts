@@ -1,12 +1,16 @@
 // Pause the pipeline for manual intervention or timeout after a specified duration
-def timeoutWithContinue(int timeoutDuration = 30, String timeoutUnit = 'MINUTES') {
+def timeoutWithContinue(String text = '', int timeoutDuration = 30, boolean autoContinue = false, String timeoutUnit = 'MINUTES') {
     script {
         try {
             timeout(time: timeoutDuration, unit: timeoutUnit) {
-                input message: "[DEBUG] Pause: click 'Proceed' to continue manually, or wait ${timeoutDuration} ${timeoutUnit.toLowerCase()} to auto-continue."
+                input message: "[DEBUG] ${text}: click 'Proceed' to continue manually, or wait ${timeoutDuration} ${timeoutUnit.toLowerCase()} to auto-continue."
             }
         } catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
-            echo '[DEBUG] Continuing automatically...'
+            if (autoContinue) {
+                echo '[DEBUG] Continuing automatically...'
+            } else {
+                throw e
+            }
         }
     }
 }
