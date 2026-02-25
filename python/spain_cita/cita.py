@@ -9,12 +9,16 @@ import undetected_chromedriver as uc
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
+from playsound import playsound
+
 from selenium import webdriver
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains, ScrollOrigin
+
+from tg_notifyer import send_message_to_telegram
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -113,6 +117,7 @@ def find_cita(driver):
 
     logger.info("Waiting for the next minute starts")
     wait_until_next_hour_plus(0.5)
+    time.sleep(3) # Wait 3 sec after new hour
     logger.info("Click ACCEPT button to get cita")
     driver.find_element(By.ID, "btnEnviar").click()
     verify_firewall(driver)
@@ -120,12 +125,12 @@ def find_cita(driver):
     text = "En este momento no hay citas disponibles."
     if text in driver.page_source:
         logger.info("NO CITAS AVAILABLE")
-        subprocess.run(["afplay", f"{SCRIPT_DIR}/cita_fail.mp3"])
-        time.sleep(10)
+        playsound(os.path.join(SCRIPT_DIR, "cita_fail.mp3"))
         return
     else:
         logger.info("Cita found.")
-        subprocess.run(["afplay", f"{SCRIPT_DIR}/cita_found.mp3"])
+        send_message_to_telegram()
+        playsound(os.path.join(SCRIPT_DIR, "cita_found.mp3"))
         time.sleep(600)
 
 
