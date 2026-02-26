@@ -122,14 +122,24 @@ def find_cita(driver):
     driver.find_element(By.ID, "btnEnviar").click()
     verify_firewall(driver)
 
+    session_broken_text = "Su sesión ha caducado por permanecer demasiado tiempo inactiva."
+    if session_broken_text in driver.page_source:
+        logger.error("Session expired due to inactivity. Restarting the search process.")
+        return
+
     text = "En este momento no hay citas disponibles."
     if text in driver.page_source:
         logger.info("NO CITAS AVAILABLE")
+        token = os.environ.get('TG_TOKEN')
+        chat_ids = os.environ.get('CHAT_IDS')
         playsound(os.path.join(SCRIPT_DIR, "cita_fail.mp3"))
         return
     else:
+        message = "Cita found! Hurry up!"
         logger.info("Cita found.")
-        send_message_to_telegram()
+        token = os.environ.get('TG_TOKEN')
+        chat_ids = os.environ.get('CHAT_IDS')
+        send_message_to_telegram(token, chat_ids, message)
         playsound(os.path.join(SCRIPT_DIR, "cita_found.mp3"))
         time.sleep(600)
 
@@ -173,6 +183,7 @@ def main():
         logger.error(f"Firewall issue detected: {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
+        time.sleep(600)
 
 
 if __name__ == "__main__":
