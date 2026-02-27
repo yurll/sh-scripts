@@ -9,12 +9,16 @@ import undetected_chromedriver as uc
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
+from playsound import playsound
+
 from selenium import webdriver
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains, ScrollOrigin
+
+from tg_notifyer import send_message_to_telegram
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -75,11 +79,11 @@ def find_cita(driver):
     driver.find_element(By.ID, "btnAceptar").click()
     verify_firewall(driver)
 
-
+    time.sleep(random.randint(1000,2000)/1000) # Random delay between 1 and 2 seconds
     logger.info("Scrolling down to the 'Entrar' button")
     scroll_origin = ScrollOrigin.from_viewport(10, 10)
     ActionChains(driver)\
-        .scroll_from_origin(scroll_origin, 0, 1200)\
+        .scroll_from_origin(scroll_origin, 0, 1600)\
         .perform()
 
     time.sleep(2)
@@ -113,19 +117,30 @@ def find_cita(driver):
 
     logger.info("Waiting for the next minute starts")
     wait_until_next_hour_plus(0.5)
+    time.sleep(3) # Wait 3 sec after new hour
     logger.info("Click ACCEPT button to get cita")
     driver.find_element(By.ID, "btnEnviar").click()
     verify_firewall(driver)
 
+    session_broken_text = "Su sesión ha caducado por permanecer demasiado tiempo inactiva."
+    if session_broken_text in driver.page_source:
+        logger.error("Session expired due to inactivity. Restarting the search process.")
+        return
+
     text = "En este momento no hay citas disponibles."
     if text in driver.page_source:
         logger.info("NO CITAS AVAILABLE")
-        subprocess.run(["afplay", f"{SCRIPT_DIR}/cita_fail.mp3"])
-        time.sleep(10)
+        token = os.environ.get('TG_TOKEN')
+        chat_ids = os.environ.get('CHAT_IDS')
+        playsound(os.path.join(SCRIPT_DIR, "cita_fail.mp3"))
         return
     else:
+        message = "Cita found! Hurry up!"
         logger.info("Cita found.")
-        subprocess.run(["afplay", f"{SCRIPT_DIR}/cita_found.mp3"])
+        token = os.environ.get('TG_TOKEN')
+        chat_ids = os.environ.get('CHAT_IDS')
+        send_message_to_telegram(token, chat_ids, message)
+        playsound(os.path.join(SCRIPT_DIR, "cita_found.mp3"))
         time.sleep(600)
 
 
@@ -168,6 +183,7 @@ def main():
         logger.error(f"Firewall issue detected: {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
+        time.sleep(600)
 
 
 if __name__ == "__main__":
