@@ -79,11 +79,11 @@ def find_cita(driver):
     driver.find_element(By.ID, "btnAceptar").click()
     verify_firewall(driver)
 
-
+    time.sleep(random.randint(1000,2000)/1000) # Random delay between 1 and 2 seconds
     logger.info("Scrolling down to the 'Entrar' button")
     scroll_origin = ScrollOrigin.from_viewport(10, 10)
     ActionChains(driver)\
-        .scroll_from_origin(scroll_origin, 0, 1200)\
+        .scroll_from_origin(scroll_origin, 0, 1600)\
         .perform()
 
     time.sleep(2)
