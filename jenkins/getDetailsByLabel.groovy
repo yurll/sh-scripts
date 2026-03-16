@@ -1,7 +1,7 @@
 def getDetailsByLabel (label) {
     def details = []
     Jenkins.instance.clouds.each { cloud ->
-        if (cloud.class.simpleName == "AmazonEC2Cloud") {
+        if (cloud.class.simpleName == "EC2Cloud") {
             cloud.getTemplates().each { template ->
                 if (template.labelString =~ label) {
                     details << [
