@@ -27,6 +27,33 @@ function bb_create_temp_branch() {
   git checkout -b "$temp_branch"
 }
 
+function bb_clone_pr() {
+  # example usage: bb_clone_pr v10.10.10,v20.20.0
+  # example usage: bb_clone_pr v3300.10.0,v3300.20.0 abcd1234
+  local branches="$1"
+  local commit_hash="$2"
+  if [ -z "$branches" ]; then
+    echo "[WARN] No branches provided. Cloning PR for all branches in BB_BRANCH_LIST_SET..."
+    echo "[WARN] Branches in BB_BRANCH_LIST_SET: ${BB_BRANCH_LIST_SET[*]}"
+  else
+    echo "[INFO] Cloning PR for branches: $branches"
+    if [ -n "${ZSH_VERSION:-}" ]; then
+      IFS=',' read -r -A BB_BRANCH_LIST_SET <<< "$branches"
+    else
+      IFS=',' read -r -a BB_BRANCH_LIST_SET <<< "$branches"
+    fi
+  fi
+  if [ -z "$commit_hash" ]; then
+    commit_hash=$(git rev-parse HEAD)
+    echo "[WARN] No commit hash provided. Using current commit hash: $commit_hash"
+  else
+    echo "[INFO] Cloning PR for commit hash: $commit_hash"
+  fi
+  git checkout -b "$temp_branch"
+  git cherry-pick "$commit_hash"
+  bb_create_prs "$commit_hash"
+}
+
 
 function bb_create_prs() {
   if [ -z "$1" ]; then
@@ -124,7 +151,7 @@ EOD
   cat "$PRS_FILE" | while read -r pr_url; do
     echo "PR URL: ${pr_url//\"/}"
   done
-  rm -f "$PRS_FILE" "$BRANCH_FILE" "$BB_RESPONSE_FILE"
+  rm -f "$PRS_FILE" "$BRANCH_FILE" "${BRANCH_FILE}.tmp" "$BB_RESPONSE_FILE"
   echo "-----------------------------"
   echo "All PRs created successfully!"
   echo "You can now delete the temporary branch '$temp_branch' if you wish."
