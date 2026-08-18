@@ -148,7 +148,7 @@ ami_creds_wait_for_ssh() {
 
   # zsh-safe split of space-delimited users into an array
   local -a ssh_users_array
-  ssh_users_array=(${=AWS_DEFAULT_SSH_USERS:-ec2-user ubuntu root})
+  read -r -a ssh_users_array <<< "${AWS_DEFAULT_SSH_USERS:-ec2-user ubuntu root}"
 
   for attempt in $(seq 1 "$ssh_retries"); do
     echo "SSH attempt ${attempt}/${ssh_retries} to ${ip}" >&2
