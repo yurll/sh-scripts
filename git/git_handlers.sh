@@ -45,7 +45,7 @@ function git_push_with_pull() {
     fi
     echo "Pulling latest changes for branch '$current_branch'..."
     git pull origin "$current_branch"
-    git push origin "$current_branch"
+    git push -u origin "$current_branch"
 }
 
 function git_set_master_and_pull() {
@@ -58,7 +58,6 @@ function git_set_master_and_pull() {
 function get_delete_local_branches_which_are_not_remote() {
     git fetch --prune origin
     git branch -vv | awk '/: gone]/{print $1}'
-    
 }
 
 alias gclean='delete_stale_local_branches'
