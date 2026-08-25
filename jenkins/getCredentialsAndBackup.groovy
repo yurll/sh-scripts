@@ -47,9 +47,6 @@ for (c in creds) {
         entry.type      = "AWS"
         entry.accessKey = c.accessKey
         entry.secretKey = c.secretKey?.getPlainText()
-    } else if (c instanceof io.snyk.jenkins.credentials.DefaultSnykApiToken) {
-        entry.type  = "Snyk"
-        entry.token = c.token?.getPlainText()
     } else {
         entry.type = "UNKNOWN"
     }
