@@ -35,3 +35,7 @@ alias grep="grep --color=auto"
 alias mkdir="mkdir -pv"
 
 alias ping="ping_any_url"
+
+# Set UTF-8 locale
+export LC_CTYPE=C.UTF-8
+export LANG=C.UTF-8
