@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if [ -f "$(dirname "$0")/.env" ]; then
+  set -a
+  source "$(dirname "$0")/.env"
+  set +a
+fi
+
 
 function kubectl_run_command() {
   local pod_name="$1"
@@ -27,7 +33,9 @@ function kubectl_run_test_pod() {
   local image="${1:-busybox:latest}"
   local command="${2:-sh}"
   local pod_name="test-pod-$(date +%s)"
-  kubectl run -it "$pod_name" --rm --image="$image" --privileged --command -- "$command"
+  kubectl run -it "$pod_name" --rm --image="$image" --privileged \
+  --overrides="$KUBE_POD_OVERRIDES" \
+    --command -- "$command"
 }
 
 alias kei='kubectl_run_test_pod'
