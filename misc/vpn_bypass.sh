@@ -1,9 +1,15 @@
+#!/usr/bin/env bash
+
 vpn_bypass() {
   local host="$1"
   local state_file="/tmp/vpn_bypass_routes.txt"
   local gateway
   local ip
   local ips
+
+  _log() {
+    echo "[$(date '+%H:%M:%S')] $*"
+  }
 
   if [[ -z "$host" ]]; then
     echo "Usage: vpn_bypass [hostname|--reset]"
@@ -20,11 +26,9 @@ vpn_bypass() {
     fi
 
     : > "$state_file"
+    return 0
   fi
 
-  _log() {
-    echo "[$(date '+%H:%M:%S')] $*"
-  }
 
   _get_gateway() {
     netstat -rn -f inet | awk '
