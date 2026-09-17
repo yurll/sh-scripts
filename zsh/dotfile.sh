@@ -13,6 +13,10 @@ function ping_any_url() {
     echo "$1" | sed -E 's/https?:\/\/|\/.*//g' | xargs command ping
 }
 
+function docker_full_clean() {
+  docker system prune -a --volumes -f
+}
+
 
 
 # HISTORY SETTINGS
@@ -35,6 +39,7 @@ alias grep="grep --color=auto"
 alias mkdir="mkdir -pv"
 
 alias ping="ping_any_url"
+alias docker-clean="docker_full_clean"
 
 # Set UTF-8 locale
 export LC_CTYPE=C.UTF-8

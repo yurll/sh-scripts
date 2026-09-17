@@ -56,21 +56,87 @@ function bb_clone_pr() {
 
 
 function bb_create_prs() {
-  if [ -z "$1" ]; then
-      echo "[WARN] No parameters provided. Getting ticket ID and title from commit message..."
-      commit_message=$(git log -1 --pretty=%B)
-      IFS=':' read -r ticket_id title <<< "$commit_message"
-      echo "[INFO] Creating PRs for ticket ID: '$ticket_id' with title: '$title'"
-  elif [ -z "$2" ]; then
-      echo "[ERROR] Ticket ID provided. Please provide a title"
-      return
-  else
-      echo "[INFO] Using provided ticket ID: '$1' and title: '$2'"
-      ticket_id="$1"
-      title="$2"
+  local ticket_id title commit_hash commit_message from_cherry_pick
+  from_cherry_pick=false
+
+
+    case $# in
+        0)
+            # bb_create_prs
+            commit_hash=$(git rev-parse HEAD)
+            commit_message=$(git log -1 --pretty=%B "$commit_hash")
+            IFS=':' read -r ticket_id title <<< "$commit_message"
+
+            echo "[INFO] Creating PRs for ticket ID: '$ticket_id' with title: '$title'"
+            ;;
+
+        1)
+            # bb_create_prs TASK-32
+            if [[ "$1" =~ ^[A-Za-z]+-[0-9]+$ ]]; then
+                echo "[ERROR] Ticket ID '$1' provided. Please provide a title."
+                echo "Usage: bb_create_prs $1 \"New Title\""
+                return 1
+            fi
+
+            # bb_create_prs 22c19e2
+            commit_hash="$1"
+
+            if ! git cat-file -e "${commit_hash}^{commit}" 2>/dev/null; then
+                echo "[ERROR] '$commit_hash' is not a valid commit."
+                return 1
+            fi
+
+            commit_message=$(git log -1 --pretty=%B "$commit_hash")
+            from_cherry_pick=true
+            IFS=':' read -r ticket_id title <<< "$commit_message"
+
+            echo "[INFO] Using commit: '$commit_hash'"
+            echo "[INFO] Creating PRs for ticket ID: '$ticket_id' with title: '$title'"
+            ;;
+
+        2)
+            # bb_create_prs TASK-32 "New Title"
+            ticket_id="$1"
+            title="$2"
+            commit_hash=$(git rev-parse HEAD)
+
+            echo "[INFO] Using provided ticket ID: '$ticket_id' and title: '$title'"
+            ;;
+
+        3)
+            # bb_create_prs TASK-32 "New Title" 22c19e2
+            ticket_id="$1"
+            title="$2"
+            commit_hash="$3"
+            from_cherry_pick=true
+
+            if ! git cat-file -e "${commit_hash}^{commit}" 2>/dev/null; then
+                echo "[ERROR] '$commit_hash' is not a valid commit."
+                return 1
+            fi
+
+            echo "[INFO] Using provided ticket ID: '$ticket_id', title: '$title', commit: '$commit_hash'"
+            ;;
+
+        *)
+            echo "[ERROR] Invalid number of arguments."
+            echo 'Usage: bb_create_prs [TICKET_ID "Title"] [commit_hash]'
+            return 1
+            ;;
+    esac
+
+    echo "[INFO] Commit hash: '$commit_hash'"
+    echo "[INFO] PR will be created for the following branches [set in BB_BRANCH_LIST_SET]: ${BB_BRANCH_LIST_SET[*]}"
+
+  local IGNORED_PATHS_REGEX=${IGNORED_PATHS_REGEX:-^$}
+  IGNORED_PATHS_REGEX="$IGNORED_PATHS_REGEX|$BRANCH_FILE|$PRS_FILE|$BB_RESPONSE_FILE"
+  if git status --porcelain | grep -qvE "${IGNORED_PATHS_REGEX:-^$}"; then
+    echo "[ERROR]: Working tree is not clean. Are you sure you added all changes?" >&2
+    echo "[ERROR]: If these changes are not relevant, you can ignore them by adding their paths to the IGNORED_PATHS_REGEX variable" >&2
+    return 1
   fi
   current_branch=$(git rev-parse --abbrev-ref HEAD)
-  commit_hash=$(git rev-parse HEAD)
+
   source "$BB_TOKEN_FILE"
   echo "DEBUG: brach_file: $BRANCH_FILE"
   echo "Current working dir: $(pwd)"
@@ -84,7 +150,7 @@ function bb_create_prs() {
     done < "$BRANCH_FILE"
   else
     echo "DEBUG: else"
-    if [ "$current_branch" != "$temp_branch" ]; then
+    if [[ "$current_branch" != "$temp_branch" && "$from_cherry_pick" != true ]]; then
       echo "Please switch to $temp_branch branch"
       return
     fi
@@ -96,14 +162,21 @@ function bb_create_prs() {
 
   reponame=$(basename "$(git rev-parse --show-toplevel)")
   for branch in "${current_branches[@]}"; do
-    side_branch="side/$BB_AUTHOR/$branch/$ticket_id"
+    side_branch="side/$branch/$BB_AUTHOR/$ticket_id"
     if [ -z "${bb_continue}" ]; then
-      git checkout "$branch"
+      echo "[INFO] Switching to branch '$branch' and creating side branch '$side_branch'..."
+      if ! git checkout "$branch"; then
+        echo "[ERROR] Failed to checkout branch '$branch'. Please ensure it exists."
+        echo "[ERROR] Or validate BB_BRANCH_LIST_SET parameter in .env file. Current value: ${BB_BRANCH_LIST_SET[*]}"
+        return 1
+      fi
       git pull origin "$branch"
       git checkout -b "$side_branch"
       if ! git cherry-pick "$commit_hash"; then
-        echo "Cherry-pick failed for branch '$side_branch'. Please resolve conflicts and try again."
-        echo "   You have to resolve conflicts and run 'git cherry-pick --continue' or 'git cherry-pick --abort' to cancel."
+        echo "[WARNING] Cherry-pick failed for branch '$side_branch'. Please resolve conflicts and try again."
+        echo "[WARNING]   You have to resolve conflicts and run either:"
+        echo "[WARNING]     git cherry-pick --continue"
+        echo "[WARNING]     git cherry-pick --abort"
         return
       fi
     fi

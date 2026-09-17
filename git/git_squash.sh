@@ -34,9 +34,10 @@ gsquashn() (
     return 2
   fi
 
-  local IGNORED_PATHS_REGEX=".vscode|.idea"
+  local IGNORED_PATHS_REGEX="${IGNORED_PATHS_REGEX:-.vscode|.idea}"
   if [[ -n "$(git status --porcelain | grep -vE ${IGNORED_PATHS_REGEX})" ]]; then
-    echo "Error: working tree is not clean. Commit/stash changes first." >&2
+    echo "[ERROR]: working tree is not clean. Commit/stash changes first." >&2
+    echo "[ERROR]: If these changes are not relevant, you can ignore them by adding their paths to the IGNORED_PATHS_REGEX variable" >&2
     return 2
   fi
 
